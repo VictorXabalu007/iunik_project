@@ -110,8 +110,17 @@ const getProfile = async (req, res) => {
 
 const updateUsers = async (req, res) => {
   const { id } = req.params;
-  const { nome, cpf, email, telefone, agencia, conta, banco, pix, tipochave } =
+  const { nome, cpf, email, telefone, agencia, conta, banco, pix, tipochave, senha } =
     req.body;
+
+  if (senha != undefined && senha.trim() === '')
+    return res.status(400).json({ error: 'Senha não pode ser vazia!' });
+
+  let passCrip = '';
+
+  if (senha) {
+    passCrip = await bcrypt.hash(senha, 10);
+  }
   if (
     !nome &&
     !email &&
@@ -190,6 +199,7 @@ const updateProfile = async (req, res) => {
     tipochave,
     senha,
   } = req.body;
+
   if (
     !nome &&
     !email &&
@@ -233,7 +243,7 @@ const updateProfile = async (req, res) => {
     if (senha != undefined && senha.trim() === '')
       return res.status(400).json({ error: 'Senha não pode ser vazia!' });
 
-    let passCrip = '';
+    let passCrip = userAtual.senha;
 
     if (senha) {
       passCrip = await bcrypt.hash(senha, 10);
@@ -250,7 +260,7 @@ const updateProfile = async (req, res) => {
       conta: conta || userAtual.conta,
       pix: pix || userAtual.pix,
       tipochave: tipochave || userAtual.tipochave,
-      senha: passCrip || userAtual.senha,
+      senha: passCrip,
     };
 
     await knex('usuarios').where('id', id).update(data).returning('*');
