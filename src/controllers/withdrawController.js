@@ -142,7 +142,7 @@ const addComprov = async (req, res) => {
   const { id } = req.params;
   const file = req.file;
   const dateNow = new Date()
-  const datacomp = `${dateNow.getDate()}/${dateNow.getMonth() + 1}/${dateNow.getFullYear()}`
+  const datacomp = dateNow.toLocaleDateString('pt-BR')
   try {
     const withdraw = await knex('saques').select('*').where('id', id);
     if (withdraw.length === 0)
@@ -159,6 +159,7 @@ const addComprov = async (req, res) => {
         tipo: 'saída',
         valor: withdraw[0].valorsaque,
         saque_id: id,
+        datarealizado: datacomp
       };
       await knex('movimentacoes').insert(moviment);
     }

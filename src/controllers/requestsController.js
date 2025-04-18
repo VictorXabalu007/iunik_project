@@ -299,7 +299,6 @@ const addRequest = async (req, res) => {
       .where('id', user_id)
       .where('cargo_id', 4); 
     if (existConsult.length === 0) {
-      console.log('entrou  aqui');
       const existCliente = await knex('usuarios')
         .where('id', user_id)
         .where('cargo_id', 5);
@@ -540,10 +539,208 @@ const addRequest = async (req, res) => {
   }
 };
 
+const addRequestWithProducts = async (req, res) => {
+  const {
+    produtos_ids,
+    linkweb
+  } = req.body;
+  const valorfrete = parseFloat(req.body.valorfrete) || 0;
+  const admins = await knex('usuarios').where('cargo_id', 1);
+
+  let user_id = req.userLogged.id;
+  let consultor_id = 1;
+  let cliente_id = 1;
+  let valorconsult = 0;
+  let valor = 0;
+  let email_copy = '';
+  let cliente_logado_nome = ''
+  const items = [];
+
+  if (
+    !produtos_ids ||
+    !linkweb
+  )
+    return res.status(400).json({ error: 'Preencha todos os campos!' });
+  try {
+    const ids = produtos_ids.map(produto => produto.id);
+    const existConsult = await knex('usuarios')
+      .where('id', user_id)
+      .where('cargo_id', 4); 
+    if (existConsult.length === 0) {
+      console.log('entrou  aqui');
+      const existCliente = await knex('usuarios')
+        .where('id', user_id)
+        .where('cargo_id', 5);
+      if (existCliente.length === 0)
+        return res
+          .status(400)
+          .json({ error: 'O cliente não existe, tente novamente!' });
+
+      email_copy = existCliente[0].email
+      cliente_id = user_id;
+      cliente_logado_nome = existCliente[0].nome
+      const products = await knex('produtos')
+        .select('*')
+        .whereIn('id', ids)
+        .where('inativo', false);
+
+      if (products.length !== ids.length)
+        return res
+          .status(400)
+          .json({ error: 'Produto selecionado não existe, tente novamente!' });
+    } else {
+      email_copy = existConsult[0].email
+      consultor_id = user_id;
+
+      const products = await knex('consultor_produtos')
+        .select(['*', 'consultor_produtos.id'])
+        .whereIn('consultor_produtos.produto_id', ids)
+        .where('produtos.inativo', false)
+        .where('consultor_produtos.consultor_id', consultor_id)
+        .innerJoin('produtos', 'produtos.id', 'consultor_produtos.produto_id');
+      if (products.length !== ids.length) {
+        products.forEach((product) => {
+          if (ids.includes(product.produto_id)) {
+            const index = ids.indexOf(product.produto_id);
+            ids.splice(index, 1);
+          }
+        });
+        const productsGeneral = await knex('produtos')
+          .select('*')
+          .whereIn('id', ids)
+          .where('inativo', false);
+
+        if (productsGeneral.length !== ids.length)
+          return res.status(400).json({
+            error: 'Produto selecionado não existe, tente novamente!',
+          });
+
+        productsGeneral.forEach((productGeneral) => {
+          products.push(productGeneral);
+        });
+      }
+    }
+
+    const datapedido = dataAtualFormatada();
+
+    const consultor = await knex('usuarios').where('id', consultor_id).first()
+
+    const newRequest = {
+      datapedido,
+      valor: valor.toFixed(2),
+      valorconsult: valorconsult.toFixed(2),
+      valorfrete,
+      consultor_id,
+      cliente_id,
+      produtos_ids: JSON.stringify(produtos_ids),
+      modelo: "venda",
+      rua: '',
+      numero: '',
+      bairro: '',
+      cep: '',
+      cidade: '',
+      estado: '',
+      complemento: '',
+      telefone: '',
+      mercadopago_id: '',
+      linkpagamento: '',
+      formaenvio: '',
+      nomecliente:  '',
+      emailcliente:  '',
+      cpfcliente: '',
+      nomeconsultor: consultor.nome ?? '',
+      linkweb
+    };
+
+    const request = await knex('pedidos').insert(newRequest).returning('*');
+    const totalQuantidade = produtos_ids.reduce((soma, produto) => {
+      return soma + produto.quantidade;
+    }, 0);
+
+    let emailError = false;
+
+    if(consultor_id != 1) {
+      admins.forEach((admin) => {
+        mailer.sendMail(
+          {
+            to: email_copy,
+            bcc: process.env.BIODERMIS_MAIL,
+            from: process.env.FROM_MAIL,
+            template: './newRequestConsult',
+            subject: `🚀 Novo Pedido Realizado! `,
+            context: {
+              nome: existConsult[0].nome,
+              qtd: items.length - 1,
+              produtos: items,
+              valorcomiss: newRequest.valorconsult,
+              nomecliente: '',
+              rua: '',
+              numero: '',
+              bairro: '',
+              cidade: '',
+              estado: '',
+              complemento: '',
+            },
+          },
+          (err) => {
+            if (err)
+              emailError = true
+          },
+        );
+      });
+    } else {
+      admins.forEach((admin) => {
+        mailer.sendMail(
+          {
+            to: admin.email,
+            bcc: process.env.BIODERMIS_MAIL,
+            from: process.env.FROM_MAIL,
+            template: './newRequestConsult',
+            subject: `🚀 Novo Pedido Realizado! `,
+            context: {
+              nome: cliente_logado_nome,
+              qtd: items.length - 1,
+              produtos: items,
+              valorcomiss: newRequest.valortotal,
+              nomecliente: admin.nome,
+              rua: '',
+              numero: '',
+              bairro: '',
+              cidade: '',
+              estado: '',
+              complemento: '',
+            },
+          },
+          (err) => {
+            if (err)
+              emailError = true
+          },
+        );
+      });
+    }
+
+    
+
+    if (emailError) {
+      return res.status(400).json({
+        error: 'Não foi possível enviar o email, tente novamente!',
+      });
+    }
+
+    return res.status(200).json({
+      success: 'Pedido cadastrado com sucesso!'
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: 'Erro no servidor!' });
+  }
+};
+
 const editRequest = async (req, res) => {
   const { id } = req.params;
   try {
     const request = await knex('pedidos').where('id', id);
+    
     if (request.length === 0)
       return res.status(404).json({ error: 'Pedido não encontrado!' });
     const {
@@ -576,7 +773,8 @@ const editRequest = async (req, res) => {
       !codigorastreio &&
       !dataenvio &&
       !formaenvio &&
-      !telefone
+      !telefone &&
+      !valorfrete
     )
       return res.status(400).json({ error: 'Nenhuma alteração encontrada!' });
 
@@ -594,6 +792,7 @@ const editRequest = async (req, res) => {
     }
 
     if (statuspag == 'realizado') {
+      const datarealizado = new Date().toLocaleDateString('pt-BR')
       const moviments = await knex('movimentacoes')
         .select('*')
         .where('pedido_id', id);
@@ -602,6 +801,7 @@ const editRequest = async (req, res) => {
           tipo: 'entrada',
           valor: request[0].valor,
           pedido_id: id,
+          datarealizado
         };
         await knex('movimentacoes').insert(moviment);
       }
@@ -703,6 +903,221 @@ const editRequest = async (req, res) => {
       }
 
     return res.status(200).json({ success: 'Pedido atualizado com sucesso!' });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: 'Erro no servidor!' });
+  }
+};
+
+const editRequestWithProducts = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const request = await knex('pedidos').where('id', id);
+    
+    if (request.length === 0)
+      return res.status(404).json({ error: 'Pedido não encontrado!' });
+
+    
+    const {
+      rua,
+      numero,
+      bairro,
+      cep,
+      cidade,
+      estado,
+      complemento,
+      telefone, 
+      formaenvio,
+      valorfrete,
+    } = req.body;
+    if (
+      !rua &&
+      !numero &&
+      !bairro &&
+      !cep &&
+      !cidade &&
+      !complemento &&
+      !formaenvio &&
+      !telefone &&
+      !valorfrete
+    )
+      return res.status(400).json({ error: 'Nenhuma alteração encontrada!' });
+
+      let user_id = req.userLogged.id;
+      let valorconsult = 0;
+      let valor = 0;
+      const items = [];
+
+      const ids = request[0].produtos_ids.map(produto => produto.id);
+      const existConsult = await knex('usuarios')
+        .where('id', user_id)
+        .where('cargo_id', 4); 
+      if (existConsult.length === 0) {
+        const existCliente = await knex('usuarios')
+          .where('id', user_id)
+          .where('cargo_id', 5);
+        if (existCliente.length === 0)
+          return res
+            .status(400)
+            .json({ error: 'O cliente não existe, tente novamente!' });
+        const products = await knex('produtos')
+          .select('*')
+          .whereIn('id', ids)
+          .where('inativo', false);
+  
+        if (products.length !== ids.length)
+          return res
+            .status(400)
+            .json({ error: 'Produto selecionado não existe, tente novamente!' });
+  
+        products.forEach(async (product) => {
+          const i = request[0].produtos_ids.findIndex(produto => produto.id === (product.produto_id ? product.produto_id : product.id));
+          valor += parseFloat(product.valorvenda) * parseInt(request[0].produtos_ids[i].quantidade);
+          items.push({
+            id: product.id,
+            title: product.nome,
+            currency_id: 'BRL',
+            picture_url: product.imagens ? product.imagens[0] : '',
+            description: product.descricao,
+            category_id: product.categoria_id,
+            quantity: request[0].produtos_ids[i].quantidade,
+            unit_price: parseFloat(product.valorvenda),
+          });
+        });
+      } else {
+  
+        const products = await knex('consultor_produtos')
+          .select(['*', 'consultor_produtos.id'])
+          .whereIn('consultor_produtos.produto_id', ids)
+          .where('produtos.inativo', false)
+          .where('consultor_produtos.consultor_id', request[0].consultor_id)
+          .innerJoin('produtos', 'produtos.id', 'consultor_produtos.produto_id');
+        if (products.length !== ids.length) {
+          products.forEach((product) => {
+            if (ids.includes(product.produto_id)) {
+              const index = ids.indexOf(product.produto_id);
+              ids.splice(index, 1);
+            }
+          });
+          const productsGeneral = await knex('produtos')
+            .select('*')
+            .whereIn('id', ids)
+            .where('inativo', false);
+  
+          if (productsGeneral.length !== ids.length)
+            return res.status(400).json({
+              error: 'Produto selecionado não existe, tente novamente!',
+            });
+  
+          productsGeneral.forEach((productGeneral) => {
+            products.push(productGeneral);
+          });
+        }
+        products.forEach(async (product) => {
+          const index = request[0].produtos_ids.findIndex(produto => produto.id === (product.produto_id ? product.produto_id : product.id));
+          if (product.valorconsult) {
+            valorconsult += parseFloat(product.valorconsult) * request[0].produtos_ids[index].quantidade;
+            valor += parseFloat(product.valortotal) * request[0].produtos_ids[index].quantidade;
+            items.push({
+              id: product.id,
+              title: product.nome,
+              currency_id: 'BRL',
+              picture_url: product.imagens ? product.imagens[0] : '',
+              description: product.descricao,
+              category_id: product.categoria_id,
+              quantity: request[0].produtos_ids[index].quantidade,
+              unit_price: parseFloat(product.valortotal),
+            });
+          } else {
+            valorconsult += 1.0 * request[0].produtos_ids[index].quantidade;
+            valor += parseFloat(product.valormin) * request[0].produtos_ids[index].quantidade;
+            items.push({
+              id: product.id,
+              title: product.nome,
+              currency_id: 'BRL',
+              picture_url: product.imagens ? product.imagens[0] : '',
+              description: product.descricao,
+              category_id: product.categoria_id,
+              quantity: request[0].produtos_ids[index].quantidade,
+              unit_price: parseFloat(product.valormin),
+            });
+          }
+        });
+      }
+  
+      const datapedido = dataAtualFormatada();
+  
+      items.push({
+        id: 0,
+        title: 'Frete',
+        currency_id: 'BRL',
+        quantity: 1,
+        unit_price: parseFloat(valorfrete),
+      });
+  
+      const ultimoPedido = await knex('pedidos')
+    .orderBy('id', 'desc')
+    .first();
+  
+      const preference = new Preference(client);
+  
+      const response = await preference.create({
+        body: {
+          items,
+          back_urls: {
+            success: 'https://site.iuniktech.com.br/mercadopagosuccess',
+            failure: 'https://site.iuniktech.com.br/mercadopagofailure',
+          },
+          auto_return: 'approved',
+          external_reference: ultimoPedido.id + 1
+        },
+      });
+
+
+    const data = {
+      rua: rua ?? request[0].rua,
+      numero: numero ?? request[0].numero,
+      bairro: bairro ?? request[0].bairro,
+      cep: cep ?? request[0].cep,
+      cidade: cidade ?? request[0].cidade,
+      estado: estado ?? request[0].estado,
+      complemento: complemento ?? request[0].complemento,
+      formaenvio: formaenvio ?? request[0].formaenvio,
+      telefone: telefone ?? request[0].telefone,
+      mercadopago_id: response.id,
+      linkpagamento: response.init_point,
+      valorfrete: valorfrete.toFixed(2),
+      valor: valor.toFixed(2),
+      valorconsult: valorconsult.toFixed(2),
+    };
+
+    await knex('pedidos').where('id', id).update(data).returning('*');
+
+    const requests = await knex('pedidos')
+          .where('consultpago', false)
+          .where('consultor_id', req.userLogged.id)
+          .where('saldodisp', true);
+
+    const requestRest = await knex('pedidos')
+      .where('resto', '>', 0)
+      .where('consultor_id', req.userLogged.id);
+    
+    if(request[0].modelo == 'abastecimento'){
+          if (requestRest.length > 0) {
+            await knex('pedidos')
+              .update({ resto: 0.0, consultpago: true })
+              .where('id', requestRest[0].id);
+          } else {
+            for (let request of requests) {
+              await knex('pedidos')
+                .update({ consultpago: true })
+                .where('id', request.id);
+            }
+          }
+          await knex('usuarios').update({valordispsaque: 0.0}).where('id', request[0].consultor_id)
+      }
+
+    return res.status(200).json({ success: 'Pedido atualizado com sucesso!', linkpagamento: data.linkpagamento });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ error: 'Erro no servidor!' });
@@ -1328,5 +1743,7 @@ module.exports = {
   getBalance,
   listPreferenceRequest,
   addRequestAbast,
-  addRequestUnlogged
+  addRequestUnlogged,
+  addRequestWithProducts,
+  editRequestWithProducts
 };

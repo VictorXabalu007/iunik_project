@@ -80,6 +80,8 @@ async function consultarPagamento(paymentId) {
   });
 
   const data = await response.json()
+  const datarealizado = new Date().toLocaleDateString('pt-BR')
+
 
   if (data.status === 'approved') {
     const [pedido] = await knex('pedidos').where('id', data.external_reference).update({ statuspag: 'realizado' }).returning('*')
@@ -89,6 +91,7 @@ async function consultarPagamento(paymentId) {
         tipo: 'entrada',
         valor: pedido.valor,
         pedido_id: pedido.id,
+        datarealizado
       };
       await knex('movimentacoes').insert(moviment);
   
