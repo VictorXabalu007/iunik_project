@@ -57,7 +57,7 @@ async function seedUsuarios() {
     const banco = getRandomItem(['Itaú', 'Bradesco', 'Santander', 'Nubank', 'Inter', 'Caixa', 'Banco do Brasil']);
     const pix = faker.internet.email();
     const tipoChave = 'email';
-    const status = getRandomItem(['Ativo', 'Ativo', 'Em aprovação', 'Bloqueado']);
+    const status = getRandomItem(['ativo', 'ativo', 'em aprovação', 'inativo']);
     
     const [consultorId] = await knex('usuarios').insert({
       nome, email, telefone, cpf, senha, agencia, conta, banco, pix, 
