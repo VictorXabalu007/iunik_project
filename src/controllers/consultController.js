@@ -1,21 +1,129 @@
 const knex = require('../config/connect');
+const mailer = require('../modules/mailer');
 
 const listConsults = async (req, res) => {
   const { id } = req.params;
   try {
     if (id < 1) {
-      const users = await knex('usuarios').select('*').where('cargo_id', 4);
-      return res.status(200).json(users);
+      const status = req.query.status || undefined;
+      const mapStatus = {
+        ativo: 'Ativo',
+        inativo: 'Inativo',
+        'em aprovação': 'Em aprovação',
+      }
+      // Primeiro, obtemos todos os consultores
+      let consultores = [];
+      if (mapStatus[status]) {
+        consultores = await knex('usuarios').select('*').where('cargo_id', 4).where('status', mapStatus[status] ?? 'Ativo');
+      } else {
+        consultores = await knex('usuarios').select('*').where('cargo_id', 4);
+      }
+      // Agora vamos buscar todos os pedidos realizados para calcular o faturamento
+      const pedidos = await knex('pedidos')
+        .select('*')
+        .where('statuspag', 'realizado')
+        .where('modelo', 'venda')
+        .whereIn('formapag_id', [1, 2, 3, 4]);
+      
+      // Mapeamos o faturamento total por consultor
+      const faturamentoPorConsultor = {};
+      pedidos.forEach(pedido => {
+        const consultorId = pedido.consultor_id;
+        const valor = parseFloat(pedido.valor);
+        
+        if (faturamentoPorConsultor[consultorId]) {
+          faturamentoPorConsultor[consultorId] += valor;
+        } else {
+          faturamentoPorConsultor[consultorId] = valor;
+        }
+      });
+      
+      // Adicionamos o faturamento e calculamos a posição no ranking
+      const consultoresComFaturamento = consultores.map(consultor => ({
+        ...consultor,
+        faturamentoAgregado: faturamentoPorConsultor[consultor.id] ? faturamentoPorConsultor[consultor.id].toFixed(2) : "0.00"
+      }));
+      
+      // Ordenar consultores por faturamento (do maior para o menor)
+      consultoresComFaturamento.sort((a, b) => 
+        parseFloat(b.faturamentoAgregado) - parseFloat(a.faturamentoAgregado)
+      );
+      
+      // Adicionar posição no ranking
+      const consultoresComRanking = consultoresComFaturamento.map((consultor, index) => ({
+        ...consultor,
+        position: index + 1
+      }));
+      
+      return res.status(200).json(consultoresComRanking);
     } else {
-      const user = await knex('usuarios')
+      // Obtendo um consultor específico
+      const consultor = await knex('usuarios')
         .select('*')
         .where('id', id)
         .where('cargo_id', 4);
-      if (user.length === 0)
+        
+      if (consultor.length === 0)
         return res.status(404).json({ error: 'Usuário não encontrado!' });
-      return res.status(200).json(user[0]);
+      
+      // Calcular o faturamento para este consultor específico
+      const pedidos = await knex('pedidos')
+        .select('*')
+        .where('consultor_id', id)
+        .where('statuspag', 'realizado')
+        .where('modelo', 'venda')
+        .whereIn('formapag_id', [1, 2, 3, 4]);
+      
+      let faturamentoTotal = 0;
+      pedidos.forEach(pedido => {
+        faturamentoTotal += parseFloat(pedido.valor);
+      });
+      
+      // Determinar a posição deste consultor no ranking
+      const todosConsultores = await knex('usuarios')
+        .select('id')
+        .where('cargo_id', 4);
+      
+      const faturamentoOutrosConsultores = [];
+      
+      // Para cada consultor, calculamos o faturamento total
+      for (const c of todosConsultores) {
+        if (c.id !== parseInt(id)) {
+          const pedidosConsultor = await knex('pedidos')
+            .select('*')
+            .where('consultor_id', c.id)
+            .where('statuspag', 'realizado')
+            .where('modelo', 'venda')
+            .whereIn('formapag_id', [1, 2, 3, 4]);
+          
+          let faturamentoConsultor = 0;
+          pedidosConsultor.forEach(pedido => {
+            faturamentoConsultor += parseFloat(pedido.valor);
+          });
+          
+          faturamentoOutrosConsultores.push({
+            id: c.id,
+            faturamento: faturamentoConsultor
+          });
+        }
+      }
+      
+      // Contar quantos consultores têm faturamento maior que este consultor
+      const position = faturamentoOutrosConsultores.filter(c => 
+        c.faturamento > faturamentoTotal
+      ).length + 1;
+      
+      // Adicionar faturamento e posição
+      const consultorComRanking = {
+        ...consultor[0],
+        faturamentoAgregado: faturamentoTotal.toFixed(2),
+        position: position
+      };
+      
+      return res.status(200).json(consultorComRanking);
     }
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ error: 'Erro no servidor!' });
   }
 };
