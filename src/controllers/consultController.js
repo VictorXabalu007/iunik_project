@@ -1,11 +1,13 @@
 const knex = require('../config/connect');
 const mailer = require('../modules/mailer');
-
+const dayjs = require('dayjs')
 const listConsults = async (req, res) => {
   const { id } = req.params;
   try {
     if (id < 1) {
       const status = req.query.status || undefined;
+      const startDate = req.query.startDate || undefined;
+      const endDate = req.query.endDate || undefined;
       const mapStatus = {
         ativo: 'Ativo',
         inativo: 'Inativo',
@@ -20,11 +22,22 @@ const listConsults = async (req, res) => {
       }
       // Agora vamos buscar todos os pedidos realizados para calcular o faturamento
       const pedidos = await knex('pedidos')
-        .select('*')
-        .where('statuspag', 'realizado')
-        .where('modelo', 'venda')
-        .whereIn('formapag_id', [1, 2, 3, 4]);
-      
+      .select('*')
+      .where('statuspag', 'realizado')
+      .where('modelo', 'venda')
+      // .whereIn('formapag_id', [1, 2, 3, 4])
+      .where(function () {
+        const fDate = (d) => {
+          const [day, month, year] = d.split('/');
+          return `${year}-${month}-${day}`;
+        } 
+        if (startDate) {
+          this.whereRaw("to_date(datapedido, 'DD/MM/YYYY') >= to_date(?, 'YYYY-MM-DD')", [fDate(startDate)]);
+        }
+        if (endDate) {
+          this.whereRaw("to_date(datapedido, 'DD/MM/YYYY') <= to_date(?, 'YYYY-MM-DD')", [fDate(endDate)]);
+        }
+      });    
       // Mapeamos o faturamento total por consultor
       const faturamentoPorConsultor = {};
       pedidos.forEach(pedido => {
