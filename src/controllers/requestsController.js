@@ -542,43 +542,31 @@ const addRequest = async (req, res) => {
 const addRequestWithProducts = async (req, res) => {
   const {
     produtos_ids,
-    linkweb
+    linkweb,
+    consultor_id,
+    nomecliente,
+    emailcliente,
+    cpfcliente,
   } = req.body;
   const valorfrete = parseFloat(req.body.valorfrete) || 0;
   const admins = await knex('usuarios').where('cargo_id', 1);
-
-  let user_id = req.userLogged.id;
-  let consultor_id = 1;
-  let cliente_id = 1;
+  const items = []
+  let valor = 0
   let valorconsult = 0;
-  let valor = 0;
-  let email_copy = '';
-  let cliente_logado_nome = ''
-  const items = [];
+  let cliente_id = 1
 
   if (
     !produtos_ids ||
-    !linkweb
+    !linkweb ||
+    !consultor_id
   )
     return res.status(400).json({ error: 'Preencha todos os campos!' });
   try {
-    const ids = produtos_ids.map(produto => produto.id);
-    const existConsult = await knex('usuarios')
-      .where('id', user_id)
-      .where('cargo_id', 4); 
-    if (existConsult.length === 0) {
-      console.log('entrou  aqui');
-      const existCliente = await knex('usuarios')
-        .where('id', user_id)
-        .where('cargo_id', 5);
-      if (existCliente.length === 0)
-        return res
-          .status(400)
-          .json({ error: 'O cliente não existe, tente novamente!' });
+    const consultor = await knex('usuarios').select('*').where('id', consultor_id).where('cargo_id', 4).first();
+      if(!consultor)
+        return res.status(400).json({ error: 'Consultor não existe!' });
 
-      email_copy = existCliente[0].email
-      cliente_id = user_id;
-      cliente_logado_nome = existCliente[0].nome
+      const ids = produtos_ids.map(produto => produto.id);
       const products = await knex('produtos')
         .select('*')
         .whereIn('id', ids)
@@ -588,48 +576,36 @@ const addRequestWithProducts = async (req, res) => {
         return res
           .status(400)
           .json({ error: 'Produto selecionado não existe, tente novamente!' });
-    } else {
-      email_copy = existConsult[0].email
-      consultor_id = user_id;
 
-      const products = await knex('consultor_produtos')
-        .select(['*', 'consultor_produtos.id'])
-        .whereIn('consultor_produtos.produto_id', ids)
-        .where('produtos.inativo', false)
-        .where('consultor_produtos.consultor_id', consultor_id)
-        .innerJoin('produtos', 'produtos.id', 'consultor_produtos.produto_id');
-      if (products.length !== ids.length) {
-        products.forEach((product) => {
-          if (ids.includes(product.produto_id)) {
-            const index = ids.indexOf(product.produto_id);
-            ids.splice(index, 1);
-          }
-        });
-        const productsGeneral = await knex('produtos')
-          .select('*')
-          .whereIn('id', ids)
-          .where('inativo', false);
+          
+      products.forEach(async (product) => {
+        const productConsult  = await knex('consultor_produtos')
+        .select('*')
+        .where('consultor_id', consultor_id)
+        .where('produto_id', product.id)
 
-        if (productsGeneral.length !== ids.length)
-          return res.status(400).json({
-            error: 'Produto selecionado não existe, tente novamente!',
-          });
+        if(productConsult.length == 0) {
+          const i = produtos_ids.findIndex(produto => produto.id === product.id);
+          valor += parseFloat(product.valorvenda) * parseInt(produtos_ids[i].quantidade);
+        } else {
+          const i = produtos_ids.findIndex(produto => produto.id === productConsult[0].produto_id);
+          valorconsult += parseFloat(productConsult[0].valorconsult) * produtos_ids[i].quantidade;
+          valor += parseFloat(productConsult[0].valortotal) * parseInt(produtos_ids[i].quantidade);
 
-        productsGeneral.forEach((productGeneral) => {
-          products.push(productGeneral);
-        });
-      }
-    }
+        }      
+      })
 
-    const datapedido = dataAtualFormatada();
+      
 
-    const consultor = await knex('usuarios').where('id', consultor_id).first()
+ 
 
+          let nomeconsultor = consultor.nome
+          const datapedido = dataAtualFormatada();
     const newRequest = {
       datapedido,
-      valor: valor.toFixed(2),
-      valorconsult: valorconsult.toFixed(2),
-      valorfrete,
+      valor: 0,
+      valorconsult: 0,
+      valorfrete: 0,
       consultor_id,
       cliente_id,
       produtos_ids: JSON.stringify(produtos_ids),
@@ -645,10 +621,10 @@ const addRequestWithProducts = async (req, res) => {
       mercadopago_id: '',
       linkpagamento: '',
       formaenvio: '',
-      nomecliente:  '',
-      emailcliente:  '',
-      cpfcliente: '',
-      nomeconsultor: consultor.nome ?? '',
+      nomecliente: nomecliente ?? '',
+      emailcliente: emailcliente ??  '',
+      cpfcliente: cpfcliente ?? '',
+      nomeconsultor,
       linkweb
     };
 
@@ -663,20 +639,21 @@ const addRequestWithProducts = async (req, res) => {
       admins.forEach((admin) => {
         mailer.sendMail(
           {
-            to: email_copy,
+            to: consultor.email,
             bcc: process.env.BIODERMIS_MAIL,
             from: process.env.FROM_MAIL,
             template: './newRequestConsult',
             subject: `🚀 Novo Pedido Realizado! `,
             context: {
-              nome: existConsult[0].nome,
+              nome: nomeconsultor,
               qtd: items.length - 1,
               produtos: items,
-              valorcomiss: newRequest.valorconsult,
-              nomecliente: '',
+              valorcomiss: 0,
+              nomecliente: nomecliente || '',
               rua: '',
               numero: '',
               bairro: '',
+              cep: '',
               cidade: '',
               estado: '',
               complemento: '',
@@ -688,35 +665,11 @@ const addRequestWithProducts = async (req, res) => {
           },
         );
       });
-    } else {
-      admins.forEach((admin) => {
-        mailer.sendMail(
-          {
-            to: admin.email,
-            bcc: process.env.BIODERMIS_MAIL,
-            from: process.env.FROM_MAIL,
-            template: './newRequestConsult',
-            subject: `🚀 Novo Pedido Realizado! `,
-            context: {
-              nome: cliente_logado_nome,
-              qtd: items.length - 1,
-              produtos: items,
-              valorcomiss: newRequest.valortotal,
-              nomecliente: admin.nome,
-              rua: '',
-              numero: '',
-              bairro: '',
-              cidade: '',
-              estado: '',
-              complemento: '',
-            },
-          },
-          (err) => {
-            if (err)
-              emailError = true
-          },
-        );
-      });
+      if (emailError) {
+        return res.status(400).json({
+          error: 'Não foi possível enviar o email, tente novamente!',
+        });
+      }
     }
 
     
