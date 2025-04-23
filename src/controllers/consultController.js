@@ -28,6 +28,7 @@ const listConsults = async (req, res) => {
       // .whereIn('formapag_id', [1, 2, 3, 4])
       .where(function () {
         const fDate = (d) => {
+          if (!d.includes('/')) return d;
           const [day, month, year] = d.split('/');
           return `${year}-${month}-${day}`;
         } 

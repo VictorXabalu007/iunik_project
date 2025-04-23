@@ -1686,6 +1686,50 @@ const addRequestUnlogged = async (req, res) => {
     }
 }
 
+const getMoreSelled = async (req, res) => {
+  const startDate = req.query.startDate || undefined;
+  const endDate = req.query.endDate || undefined;
+  const requestMoreSelled = await knex('pedidos')
+  .select('produtos_ids') // Array<{ produtos_ids: Array<{id: number, quantidade: number}> }>
+  .where(function () {
+    const fDate = (d) => {
+      if (!d.includes('/')) return d;
+      const [day, month, year] = d.split('/');
+      return `${year}-${month}-${day}`;
+    } 
+    if (startDate) {
+      this.whereRaw("to_date(datapedido, 'DD/MM/YYYY') >= to_date(?, 'YYYY-MM-DD')", [fDate(startDate)]);
+    }
+    if (endDate) {
+      this.whereRaw("to_date(datapedido, 'DD/MM/YYYY') <= to_date(?, 'YYYY-MM-DD')", [fDate(endDate)]);
+    }
+  });    
+  const productIds = (await knex('produtos')
+  .select('id')).map((product) => product.id);
+  const produto = requestMoreSelled.reduce((acc, pedido) => {
+    const produtos = (pedido.produtos_ids);
+    produtos.forEach((produto) => {
+      const produtoExistente = acc.find((p) => p.id === produto.id);
+      if (produtoExistente) {
+        produtoExistente.quantidade += produto.quantidade;
+      } else {
+        if (productIds.includes(produto.id)) {
+          acc.push({ ...produto });
+        } else {
+          console.log('Produto não existe', produto.id)
+        }
+      }
+    });
+    return acc;
+  }, []).sort((a, b) => b.quantidade - a.quantidade)[0];
+  console.log({ produto })
+  if (!produto) return res.json([{ nome: 'Nenhum produto vendido nesse intervalo de datas!' }]);
+  const product = await knex('produtos')
+  .select('nome')
+  .where({ id: produto.id })
+  return res.status(200).json(product)
+}
+
 module.exports = {
   listRequests,
   listRequestsUsers,
@@ -1698,5 +1742,6 @@ module.exports = {
   addRequestAbast,
   addRequestUnlogged,
   addRequestWithProducts,
-  editRequestWithProducts
+  editRequestWithProducts,
+  getMoreSelled
 };

@@ -7,6 +7,7 @@ const listMoviments = async (req, res) => {
   try {
     let query = knex('movimentacoes').where(function () {
       const fDate = (d) => {
+        if (!d.includes('/')) return d;
         const [day, month, year] = d.split('/');
         // Adiciona zeros à esquerda se necessário
         const paddedMonth = month.padStart(2, '0');
