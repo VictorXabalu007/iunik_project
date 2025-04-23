@@ -15,7 +15,7 @@ const { faker } = require('@faker-js/faker');
         }
         try {
             const res = await knex('movimentacoes').insert({
-                tipo: random > 0.5 ? 'entrada' : 'saída',
+                tipo: pedido_id ? 'entrada' : 'saída',
                 valor: faker.number.int({ min: 1, max: 1000 }),
                 datarealizado: faker.date.past().toISOString().split('T')[0],
                 pedido_id: pedido_id,
