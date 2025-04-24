@@ -1,8 +1,8 @@
-const knex = require('../config/connect');
-const fs = require('fs');
+const knex = require("../config/connect");
+const fs = require("fs");
 
 const categoriasExistem = async (categoriaIds) => {
-  const categorias = await knex('categorias').whereIn('id', categoriaIds);
+  const categorias = await knex("categorias").whereIn("id", categoriaIds);
   return categorias.length === categoriaIds.length;
 };
 
@@ -26,28 +26,32 @@ const addProduct = async (req, res) => {
     !Array.isArray(categoria_ids) ||
     categoria_ids.length === 0
   )
-    return res.status(400).json({ error: 'Preencha todos os campos!' });
+    return res.status(400).json({ error: "Preencha todos os campos!" });
 
   try {
     const categoriasValidas = await categoriasExistem(categoria_ids);
 
     if (!categoriasValidas) {
-      return res.status(400).json({ error: 'Uma ou mais categorias fornecidas não existem.' });
+      return res
+        .status(400)
+        .json({ error: "Uma ou mais categorias fornecidas não existem." });
     }
 
     if (!categoria_ids.every(Number.isInteger)) {
-      return res.status(400).json({ error: 'Categorias não identificadas, tente novamente.' });
+      return res
+        .status(400)
+        .json({ error: "Categorias não identificadas, tente novamente." });
     }
 
     if (parseFloat(valorvenda) < parseFloat(valormin))
       return res.status(400).json({
         error:
-          'O valor da venda não pode ser menor que o valor mínimo do produto!',
+          "O valor da venda não pode ser menor que o valor mínimo do produto!",
       });
     if (parseFloat(valorvenda) > parseFloat(valormax))
       return res.status(400).json({
         error:
-          'O valor da venda não pode ser maior que o valor máximo do produto!',
+          "O valor da venda não pode ser maior que o valor máximo do produto!",
       });
 
     const newProduct = {
@@ -63,52 +67,52 @@ const addProduct = async (req, res) => {
       categoria_ids,
     };
 
-    const product = await knex('produtos').insert(newProduct).returning('*');
+    const product = await knex("produtos").insert(newProduct).returning("*");
     return res.status(200).json({
-      success: 'Produto cadastrado com sucesso!',
+      success: "Produto cadastrado com sucesso!",
       idProduct: product[0].id,
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ error: 'Erro no servidor!' });
+    return res.status(500).json({ error: "Erro no servidor!" });
   }
 };
 const listProducts = async (req, res) => {
   const { id } = req.params;
   try {
     if (id < 1) {
-      const products = await knex('produtos').select('*');
+      const products = await knex("produtos").select("*");
       return res.status(200).json(products);
     } else {
-      const products = await knex('produtos').select('*').where('id', id);
+      const products = await knex("produtos").select("*").where("id", id);
       if (products.length === 0)
-        return res.status(404).json({ error: 'Produto não encontrado!' });
+        return res.status(404).json({ error: "Produto não encontrado!" });
       return res.status(200).json(products[0]);
     }
   } catch (error) {
-    return res.status(500).json({ error: 'Erro no servidor!' });
+    return res.status(500).json({ error: "Erro no servidor!" });
   }
 };
 
 const listProductsConsult = async (req, res) => {
   try {
-    const products = await knex('consultor_produtos')
-      .select(['*', 'consultor_produtos.id'])
-      .where('produtos.inativo', false)
-      .innerJoin('produtos', 'produtos.id', 'consultor_produtos.produto_id');
+    const products = await knex("consultor_produtos")
+      .select(["*", "consultor_produtos.id"])
+      .where("produtos.inativo", false)
+      .innerJoin("produtos", "produtos.id", "consultor_produtos.produto_id");
 
     return res.status(200).json(products);
   } catch (error) {
-    return res.status(500).json({ error: 'Erro no servidor!' });
+    return res.status(500).json({ error: "Erro no servidor!" });
   }
 };
 
 const editProduct = async (req, res) => {
   const { id } = req.params;
   try {
-    const product = await knex('produtos').where('id', id);
+    const product = await knex("produtos").where("id", id);
     if (product.length === 0)
-      return res.status(404).json({ error: 'Produto não encontrado!' });
+      return res.status(404).json({ error: "Produto não encontrado!" });
 
     const { nome, descricao, categoria_ids } = req.body;
     let valorvenda = parseFloat(req.body.valorvenda);
@@ -131,22 +135,27 @@ const editProduct = async (req, res) => {
       !profundidade &&
       !categoria_ids
     )
-      return res.status(400).json({ error: 'Nenhuma alteração encontrada!' });
+      return res.status(400).json({ error: "Nenhuma alteração encontrada!" });
 
-    if (categoria_ids && categoria_ids.length === 0) 
-        return res.status(400).json({ error: 'Informe pelo menos uma categoria para o produto!' });
+    if (categoria_ids && categoria_ids.length === 0)
+      return res
+        .status(400)
+        .json({ error: "Informe pelo menos uma categoria para o produto!" });
 
     if (categoria_ids && !categoria_ids.every(Number.isInteger))
-        return res.status(400).json({ error: 'Todas as categorias devem ser números inteiros.' });
+      return res
+        .status(400)
+        .json({ error: "Todas as categorias devem ser números inteiros." });
 
-    if(categoria_ids) {
+    if (categoria_ids) {
       const categoriasValidas = await categoriasExistem(categoria_ids);
 
-      if (!categoriasValidas) 
-        return res.status(400).json({ error: 'Uma ou mais categorias fornecidas não existem.' });
+      if (!categoriasValidas)
+        return res
+          .status(400)
+          .json({ error: "Uma ou mais categorias fornecidas não existem." });
     }
-        
-    
+
     valorvenda = req.body.valorvenda
       ? parseFloat(valorvenda).toFixed(2)
       : parseFloat(product[0].valorvenda);
@@ -167,15 +176,15 @@ const editProduct = async (req, res) => {
       ? parseFloat(profundidade).toFixed(2)
       : product[0].profundidade;
 
-      if (parseFloat(valorvenda) < parseFloat(valormin))
+    if (parseFloat(valorvenda) < parseFloat(valormin))
       return res.status(400).json({
         error:
-          'O valor da venda não pode ser menor que o valor mínimo do produto!',
+          "O valor da venda não pode ser menor que o valor mínimo do produto!",
       });
-      if (parseFloat(valorvenda) > parseFloat(valormax))
+    if (parseFloat(valorvenda) > parseFloat(valormax))
       return res.status(400).json({
         error:
-          'O valor da venda não pode ser maior que o valor máximo do produto!',
+          "O valor da venda não pode ser maior que o valor máximo do produto!",
       });
 
     const data = {
@@ -191,39 +200,39 @@ const editProduct = async (req, res) => {
       categoria_ids: categoria_ids ?? product[0].categoria_ids,
     };
 
-    await knex('produtos').where('id', id).update(data).returning('*');
+    await knex("produtos").where("id", id).update(data).returning("*");
 
-    return res.status(200).json({ success: 'Produto atualizado com sucesso!' });
+    return res.status(200).json({ success: "Produto atualizado com sucesso!" });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ error: 'Erro no servidor!' });
+    return res.status(500).json({ error: "Erro no servidor!" });
   }
 };
 const removeProduct = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const product = await knex('produtos').where('id', id);
+    const product = await knex("produtos").where("id", id);
     if (product.length === 0)
-      return res.status(404).json({ error: 'Produto não encontrado!' });
+      return res.status(404).json({ error: "Produto não encontrado!" });
 
-    const productConsultDeleted = await knex('consultor_produtos')
+    const productConsultDeleted = await knex("consultor_produtos")
       .del()
-      .where('produto_id', id);
+      .where("produto_id", id);
 
-    const assessmentsDeleted = await knex('avaliacoes')
+    const assessmentsDeleted = await knex("avaliacoes")
       .del()
-      .where('produto_id', id);
+      .where("produto_id", id);
 
-    const productDeleted = await knex('produtos').del().where('id', id);
+    const productDeleted = await knex("produtos").del().where("id", id);
     if (productDeleted.rowCount === 0)
       return res.status(400).json({
-        error: 'Não foi possível excluir o Produto, tente novamente!',
+        error: "Não foi possível excluir o Produto, tente novamente!",
       });
 
-    return res.status(200).json({ success: 'Produto excluído com sucesso!' });
+    return res.status(200).json({ success: "Produto excluído com sucesso!" });
   } catch (error) {
-    return res.status(500).json({ error: 'Erro no servidor!' });
+    return res.status(500).json({ error: "Erro no servidor!" });
   }
 };
 
@@ -231,27 +240,27 @@ const addImgProd = async (req, res) => {
   const { id } = req.params;
   const files = req.files;
   try {
-    const product = await knex('produtos').where('id', id);
+    const product = await knex("produtos").where("id", id);
     if (product.length === 0)
-      return res.status(404).json({ error: 'Produto não encontrado!' });
+      return res.status(404).json({ error: "Produto não encontrado!" });
 
     if (files.length === 0)
       return res
         .status(400)
-        .json({ error: 'Nenhuma imagem enviada, tente novamente!' });
+        .json({ error: "Nenhuma imagem enviada, tente novamente!" });
 
     const imagesPath = product[0].imagens || [];
     files.forEach((file) => {
       imagesPath.push(file.path);
     });
 
-    await knex('produtos')
-      .where('id', id)
+    await knex("produtos")
+      .where("id", id)
       .update({ imagens: imagesPath })
-      .returning('*');
-    return res.json({ success: 'Imagens adicionadas com sucesso!' });
+      .returning("*");
+    return res.json({ success: "Imagens adicionadas com sucesso!" });
   } catch (error) {
-    return res.status(500).json({ error: 'Erro no servidor!' });
+    return res.status(500).json({ error: "Erro no servidor!" });
   }
 };
 
@@ -260,9 +269,9 @@ const removeImgProd = async (req, res) => {
   const { imagens } = req.body;
   let cancela = false;
   try {
-    const product = await knex('produtos').where('id', id);
+    const product = await knex("produtos").where("id", id);
     if (product.length === 0)
-      return res.status(404).json({ error: 'Produto não encontrado!' });
+      return res.status(404).json({ error: "Produto não encontrado!" });
 
     const imagesPath = [...product[0].imagens];
     const imagesDeleted = [];
@@ -276,82 +285,91 @@ const removeImgProd = async (req, res) => {
     if (imagesPath.length > 0) {
       if (imagens.length > 0) {
         imagens.forEach((img) => {
-          if (imagesPath[img].startsWith('http')) {
+          if (imagesPath[img].startsWith("http")) {
             imagesDeleted.push(imagesPath[img]);
           } else {
-            fs.unlinkSync(imagesPath[img]);
+            try {
+              fs.unlinkSync(imagesPath[img]);
+            } catch (err) {}
             imagesDeleted.push(imagesPath[img]);
           }
         });
       } else {
         return res
           .status(400)
-          .json({ error: 'Informe quais imagens para deletar!' });
+          .json({ error: "Informe quais imagens para deletar!" });
       }
 
       const data = imagesPath.filter((image) => !imagesDeleted.includes(image));
 
-      await knex('produtos')
-        .where('id', id)
+      await knex("produtos")
+        .where("id", id)
         .update({ imagens: data })
-        .returning('*');
+        .returning("*");
 
-      return res.json({ success: 'Imagens excluídas com sucesso!' });
+      return res.json({ success: "Imagens excluídas com sucesso!" });
     } else {
       return res
         .status(400)
-        .json({ error: 'Imagens não excluídas, produto sem fotos!' });
+        .json({ error: "Imagens não excluídas, produto sem fotos!" });
     }
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ error: 'Erro no servidor!' });
+    return res.status(500).json({ error: "Erro no servidor!" });
   }
 };
 
-
 const getTop5ProdutosMaisVendidos = async (req, res) => {
   try {
-      const pedidos = await knex('pedidos').select('produtos_ids');
+    const pedidos = await knex("pedidos").select("produtos_ids");
 
-      const produtosCount = {};
+    const produtosCount = {};
 
+    pedidos.forEach((pedido) => {
+      const produtos = pedido.produtos_ids;
 
-      pedidos.forEach(pedido => {
+      produtos.forEach((produto) => {
+        const { id, quantidade } = produto;
 
-          const produtos = pedido.produtos_ids; 
-
-          produtos.forEach(produto => {
-              const { id, quantidade } = produto;
-
-              if (produtosCount[id]) {
-                  produtosCount[id] += quantidade;
-              } else {
-                  produtosCount[id] = quantidade;
-              }
-          });
+        if (produtosCount[id]) {
+          produtosCount[id] += quantidade;
+        } else {
+          produtosCount[id] = quantidade;
+        }
       });
+    });
 
-      const topProdutos = Object.entries(produtosCount)
-          .map(([id, quantidade]) => ({ id, quantidade }))
-          .sort((a, b) => b.quantidade - a.quantidade)
+    const topProdutos = Object.entries(produtosCount)
+      .map(([id, quantidade]) => ({ id, quantidade }))
+      .sort((a, b) => b.quantidade - a.quantidade);
 
-      const {id: idLancamentos} = await knex('categorias').where('categoria', 'Lançamentos').first()
-      const lancamentos = await knex('produtos').whereRaw('categoria_ids @> ARRAY[?]::integer[]', [idLancamentos]).select("*")
+    const { id: idLancamentos } = await knex("categorias")
+      .where("categoria", "Lançamentos")
+      .first();
+    const lancamentos = await knex("produtos")
+      .whereRaw("categoria_ids @> ARRAY[?]::integer[]", [idLancamentos])
+      .select("*");
 
-      const {id: idPromocoes} = await knex('categorias').where('categoria', 'Promoções').first()
-      const promocoes = await knex('produtos').whereRaw('categoria_ids @> ARRAY[?]::integer[]', [idPromocoes]).select("*")
+    const { id: idPromocoes } = await knex("categorias")
+      .where("categoria", "Promoções")
+      .first();
+    const promocoes = await knex("produtos")
+      .whereRaw("categoria_ids @> ARRAY[?]::integer[]", [idPromocoes])
+      .select("*");
 
-      const arrayDeIds = topProdutos.map(produto => produto.id);
-      let produtos = await knex('produtos').whereIn('id', arrayDeIds)
-      if (produtos.length === 0) {
-        produtos = await knex('produtos').select('*')
-      }
-      produtos.slice(0,5)
+    const arrayDeIds = topProdutos.map((produto) => produto.id);
+    let produtos = await knex("produtos").whereIn("id", arrayDeIds);
+    if (produtos.length === 0) {
+      produtos = await knex("produtos").select("*");
+    }
+    produtos.slice(0, 5);
 
-      return res.status(200).json({maisVendidos: produtos, lancamentos, promocoes});
+    return res
+      .status(200)
+      .json({ maisVendidos: produtos, lancamentos, promocoes });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ error: 'Erro no servidor.' });
+    return res.status(500).json({ error: "Erro no servidor." });
   }
 };
 
@@ -363,5 +381,5 @@ module.exports = {
   listProductsConsult,
   addImgProd,
   removeImgProd,
-  getTop5ProdutosMaisVendidos
+  getTop5ProdutosMaisVendidos,
 };
