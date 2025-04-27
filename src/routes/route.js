@@ -31,6 +31,7 @@ router.post(
   "/pedidos/produtos/:id",
   requestsController.editRequestWithProducts
 );
+router.get("/pedido-mais-vendido", requestsController.getMoreSelled);
 
 router.use(userRoutes);
 router.use(categoryRoutes);

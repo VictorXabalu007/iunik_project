@@ -6,7 +6,7 @@ const authorize = require("../middlewares/authorize");
 router.post("/pedidos", requestsController.addRequest);
 
 router.get("/pedidos/:id", requestsController.listRequests);
-router.get("/pedido-mais-vendido", requestsController.getMoreSelled);
+// router.get("/pedido-mais-vendido", requestsController.getMoreSelled);
 router.get("/pedidos/usuarios/:id", requestsController.listRequestsUsers);
 router.patch("/pedidos/:id", requestsController.editRequest);
 router.delete("/pedidos/:id", requestsController.removeRequest);
