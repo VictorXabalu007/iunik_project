@@ -13,7 +13,7 @@ const checkLogin = async (req, res, next) => {
     const token = authorization.split(' ')[1];
 
     const userLogged = await jwt.verify(token, process.env.JWT_PASS);
-    const existUser = await knex('usuarios').where('id', userLogged.usuario.id).where('inativo', false);
+    const existUser = await knex('usuarios').where('id', userLogged.usuario.id).where('status', "Ativo");
     if (existUser.length === 0)
       return res.status(401).json({
         error: 'Sua sessão terminou, por favor efetue novamente seu login.',
