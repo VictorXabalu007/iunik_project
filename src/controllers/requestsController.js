@@ -915,6 +915,9 @@ const editRequestWithProducts = async (req, res) => {
       telefone,
       formaenvio,
       valorfrete,
+      nomecliente,
+      emailcliente,
+      cpfcliente,
     } = req.body;
     if (
       !rua &&
@@ -925,11 +928,14 @@ const editRequestWithProducts = async (req, res) => {
       !complemento &&
       !formaenvio &&
       !telefone &&
-      !valorfrete
+      !valorfrete &&
+      !nomecliente &&
+      !emailcliente &&
+      !cpfcliente
     )
       return res.status(400).json({ error: "Nenhuma alteração encontrada!" });
 
-    let user_id = req.userLogged.id;
+    let user_id = request[0].consultor_id;
     let valorconsult = 0;
     let valor = 0;
     const items = [];
@@ -1082,6 +1088,9 @@ const editRequestWithProducts = async (req, res) => {
       complemento: complemento ?? request[0].complemento,
       formaenvio: formaenvio ?? request[0].formaenvio,
       telefone: telefone ?? request[0].telefone,
+      nomecliente: nomecliente ?? request[0].nomecliente,
+      emailcliente: emailcliente ?? request[0].emailcliente,
+      cpfcliente: cpfcliente ?? request[0].cpfcliente,
       mercadopago_id: response.id,
       linkpagamento: response.init_point,
       valorfrete: valorfrete.toFixed(2),
@@ -1093,12 +1102,12 @@ const editRequestWithProducts = async (req, res) => {
 
     const requests = await knex("pedidos")
       .where("consultpago", false)
-      .where("consultor_id", req.userLogged.id)
+      .where("consultor_id", request[0].consultor_id)
       .where("saldodisp", true);
 
     const requestRest = await knex("pedidos")
       .where("resto", ">", 0)
-      .where("consultor_id", req.userLogged.id);
+      .where("consultor_id", request[0].consultor_id);
 
     if (request[0].modelo == "abastecimento") {
       if (requestRest.length > 0) {
@@ -1117,15 +1126,13 @@ const editRequestWithProducts = async (req, res) => {
         .where("id", request[0].consultor_id);
     }
 
-    return res
-      .status(200)
-      .json({
-        success: "Pedido atualizado com sucesso!",
-        linkpagamento: data.linkpagamento,
-      });
+    return res.status(200).json({
+      success: "Pedido atualizado com sucesso!",
+      linkpagamento: data.linkpagamento,
+    });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ error: "Erro no servidor!" });
+    return res.status(500).json({ error: `Erro no servidor! ${error}` });
   }
 };
 
