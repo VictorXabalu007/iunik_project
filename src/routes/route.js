@@ -26,6 +26,7 @@ router.get("/categorias", categoryController.listCategorys);
 router.get("/carrossel/:id", carrosselController.listCarrossel);
 router.post("/endereco", addressController.addAddress);
 router.post("/pedidos/web", requestsController.addRequestUnlogged);
+router.post("/pedidos/produtos", requestsController.addRequestWithProducts);
 router.post(
   "/pedidos/produtos/:id",
   requestsController.editRequestWithProducts

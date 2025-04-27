@@ -19,7 +19,7 @@ router.get(
 );
 
 router.post("/pedidos/abastecimento", requestsController.addRequestAbast);
-router.post("/pedidos/produtos", requestsController.addRequestWithProducts);
+// router.post("/pedidos/produtos", requestsController.addRequestWithProducts);
 router.patch(
   "/pedidos/produtos/:id",
   requestsController.editRequestWithProducts
