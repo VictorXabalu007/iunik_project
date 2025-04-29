@@ -730,6 +730,7 @@ const addRequestWithProducts = async (req, res) => {
     return res.status(200).json({
       success: "Pedido cadastrado com sucesso!",
       id: request[0].id,
+      linkweb: request[0].linkweb,
     });
   } catch (error) {
     console.log(error);
