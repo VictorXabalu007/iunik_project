@@ -666,6 +666,19 @@ const addRequestWithProducts = async (req, res) => {
     };
 
     const request = await knex("pedidos").insert(newRequest).returning("*");
+
+    if (request && request[0].id) {
+      // 3. Atualizar o linkweb com o pedidoId
+      const novoLinkweb = `${request[0].linkweb}?pedidoId=${request[0].id}`;
+    
+      await knex("pedidos")
+        .where({ id: request[0].id })
+        .update({ linkweb: novoLinkweb });
+    
+      console.log("Pedido criado e link atualizado:", novoLinkweb);
+    } else {
+      console.error("Erro ao criar pedido.");
+    }
     const totalQuantidade = produtos_ids.reduce((soma, produto) => {
       return soma + produto.quantidade;
     }, 0);
