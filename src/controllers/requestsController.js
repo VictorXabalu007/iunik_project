@@ -669,7 +669,7 @@ const addRequestWithProducts = async (req, res) => {
 
     if (request[0].id) {
       // 3. Atualizar o linkweb com o pedidoId
-      const novoLinkweb = `${request[0].linkweb}?pedidoId=${request[0].id}`;
+      const novoLinkweb = `${request[0].linkweb}&pedidoId=${request[0].id}`;
     
       await knex("pedidos")
         .where({ id: request[0].id })
