@@ -455,8 +455,8 @@ const addRequest = async (req, res) => {
       body: {
         items,
         back_urls: {
-          success: "https://site.iuniktech.com.br/mercadopagosuccess",
-          failure: "https://site.iuniktech.com.br/mercadopagofailure",
+          success: "https://site.biodermis.com.br/mercadopagosuccess",
+          failure: "https://site.biodermis.com.br/mercadopagofailure",
         },
         auto_return: "approved",
         external_reference: ultimoPedido.id + 1,
@@ -1087,8 +1087,8 @@ const editRequestWithProducts = async (req, res) => {
       body: {
         items,
         back_urls: {
-          success: "https://site.iuniktech.com.br/mercadopagosuccess",
-          failure: "https://site.iuniktech.com.br/mercadopagofailure",
+          success: "https://site.biodermis.com.br/mercadopagosuccess",
+          failure: "https://site.biodermis.com.br/mercadopagofailure",
         },
         auto_return: "approved",
         external_reference: ultimoPedido.id + 1,
@@ -1429,8 +1429,8 @@ const addRequestAbast = async (req, res) => {
         body: {
           items,
           back_urls: {
-            success: "https://site.iuniktech.com.br/mercadopagosuccess",
-            failure: "https://site.iuniktech.com.br/mercadopagofailure",
+            success: "https://site.biodermis.com.br/mercadopagosuccess",
+            failure: "https://site.biodermis.com.br/mercadopagofailure",
           },
           auto_return: "approved",
           external_reference: ultimoPedido.id + 1,
@@ -1692,8 +1692,8 @@ const addRequestUnlogged = async (req, res) => {
       body: {
         items,
         back_urls: {
-          success: "https://site.iuniktech.com.br/mercadopagosuccess",
-          failure: "https://site.iuniktech.com.br/mercadopagofailure",
+          success: "https://site.biodermis.com.br/mercadopagosuccess",
+          failure: "https://site.biodermis.com.br/mercadopagofailure",
         },
         auto_return: "approved",
         external_reference: ultimoPedido.id + 1,
