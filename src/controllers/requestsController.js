@@ -797,7 +797,7 @@ const editRequest = async (req, res) => {
     }
 
     if (statuspag == "realizado") {
-      const datarealizado = new Date().toLocaleDateString("pt-BR");
+      const datarealizado = new Date().toLocaleDateString("pt-BR").replaceAll('/', '-');
       const moviments = await knex("movimentacoes")
         .select("*")
         .where("pedido_id", id);

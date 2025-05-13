@@ -142,7 +142,7 @@ const addComprov = async (req, res) => {
   const { id } = req.params;
   const file = req.file;
   const dateNow = new Date()
-  const datacomp = dateNow.toLocaleDateString('pt-BR')
+  const datacomp = dateNow.toLocaleDateString('pt-BR').replace('/', '-');
   try {
     const withdraw = await knex('saques').select('*').where('id', id);
     if (withdraw.length === 0)
