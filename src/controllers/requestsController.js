@@ -1079,7 +1079,7 @@ const editRequestWithProducts = async (req, res) => {
       unit_price: parseFloat(valorfrete),
     });
 
-    const ultimoPedido = await knex("pedidos").orderBy("id", "desc").first();
+    // const ultimoPedido = await knex("pedidos").orderBy("id", "desc").first();
 
     const preference = new Preference(client);
 
@@ -1091,7 +1091,7 @@ const editRequestWithProducts = async (req, res) => {
           failure: "https://site.biodermis.com.br/mercadopagofailure",
         },
         auto_return: "approved",
-        external_reference: ultimoPedido.id + 1,
+        external_reference: id,
       },
     });
 
