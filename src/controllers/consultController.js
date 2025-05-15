@@ -157,49 +157,49 @@ const bloqConsult = async (req, res) => {
       .update({ status: optText })
       .returning('*');
 
-    // if(opt === 1) {
-    //   try {
-    //     mailer.sendMail(
-    //       {
-    //         to: email,
-    //         bcc: process.env.BIODERMIS_MAIL,
-    //         from: process.env.FROM_MAIL,
-    //         template: './userActive',
-    //         subject: `✅ Cadastro Aprovado! Você já pode começar a revender Biodermis!`,
-    //         context: {
-    //           nome,
-    //         },
-    //       },
-    //       (err) => {
-    //         if (err)
-    //           console.log(err)
-    //       },
-    //     )
-    //   } catch (error) {
-    //     console.log('Erro ao tentar enviar e-mail:', err);
-    //   }
-    // } else {
-    //   try {
-    //     mailer.sendMail(
-    //       {
-    //         to: email,
-    //         bcc: process.env.BIODERMIS_MAIL,
-    //         from: process.env.FROM_MAIL,
-    //         template: './userBloq',
-    //         subject: `Infelizmente, seu cadastro não pôde ser aprovado.`,
-    //         context: {
-    //           nome,
-    //         },
-    //       },
-    //       (err) => {
-    //         if (err)
-    //           console.log(err)
-    //       },
-    //     )
-    //   } catch (error) {
-    //     console.log('Erro ao tentar enviar e-mail:', err);
-    //   }
-    // }
+    if(opt === 1) {
+      try {
+        mailer.sendMail(
+          {
+            to: email,
+            bcc: process.env.BIODERMIS_MAIL,
+            from: process.env.FROM_MAIL,
+            template: './userActive',
+            subject: `✅ Cadastro Aprovado! Você já pode começar a revender Biodermis!`,
+            context: {
+              nome,
+            },
+          },
+          (err) => {
+            if (err)
+              console.log(err)
+          },
+        )
+      } catch (error) {
+        console.log('Erro ao tentar enviar e-mail:', err);
+      }
+    } else {
+      try {
+        mailer.sendMail(
+          {
+            to: email,
+            bcc: process.env.BIODERMIS_MAIL,
+            from: process.env.FROM_MAIL,
+            template: './userBloq',
+            subject: `Infelizmente, seu cadastro não pôde ser aprovado.`,
+            context: {
+              nome,
+            },
+          },
+          (err) => {
+            if (err)
+              console.log(err)
+          },
+        )
+      } catch (error) {
+        console.log('Erro ao tentar enviar e-mail:', err);
+      }
+    }
 
     return res.status(200).json({ success: 'Status alterado com sucesso!' });
   } catch (error) {
