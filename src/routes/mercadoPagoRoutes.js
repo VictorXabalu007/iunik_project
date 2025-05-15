@@ -80,7 +80,7 @@ async function consultarPagamento(paymentId) {
   });
 
   const data = await response.json()
-  const datarealizado = new Date().toLocaleDateString('pt-BR')
+  const datarealizado = new Date().toISOString().split('T')[0]
 
 
   if (data.status === 'approved') {
