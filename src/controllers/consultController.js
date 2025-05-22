@@ -48,32 +48,32 @@ const listConsults = async (req, res) => {
             );
           }
         });
-      const pedidosAny = await knex("pedidos")
-        .select("*")
-        // .where('statuspag', 'realizado')
-        // .where('modelo', 'venda')
-        // .whereIn('formapag_id', [1, 2, 3, 4])
-        .where(function () {
-          const fDate = (d) => {
-            if (!d.includes("/")) return d;
-            const [day, month, year] = d.split("/");
-            return `${year}-${month}-${day}`;
-          };
-          if (startDate) {
-            this.whereRaw(
-              "to_date(datapedido, 'DD/MM/YYYY') >= to_date(?, 'YYYY-MM-DD')",
-              [fDate(startDate)]
-            );
-          }
-          if (endDate) {
-            this.whereRaw(
-              "to_date(datapedido, 'DD/MM/YYYY') <= to_date(?, 'YYYY-MM-DD')",
-              [fDate(endDate)]
-            );
-          }
-        });
+      // const pedidosAny = await knex("pedidos")
+      //   .select("*")
+      //   // .where('statuspag', 'realizado')
+      //   // .where('modelo', 'venda')
+      //   // .whereIn('formapag_id', [1, 2, 3, 4])
+      //   .where(function () {
+      //     const fDate = (d) => {
+      //       if (!d.includes("/")) return d;
+      //       const [day, month, year] = d.split("/");
+      //       return `${year}-${month}-${day}`;
+      //     };
+      //     if (startDate) {
+      //       this.whereRaw(
+      //         "to_date(datapedido, 'DD/MM/YYYY') >= to_date(?, 'YYYY-MM-DD')",
+      //         [fDate(startDate)]
+      //       );
+      //     }
+      //     if (endDate) {
+      //       this.whereRaw(
+      //         "to_date(datapedido, 'DD/MM/YYYY') <= to_date(?, 'YYYY-MM-DD')",
+      //         [fDate(endDate)]
+      //       );
+      //     }
+      //   });
       let pedidosCount = {};
-      pedidosAny.forEach((pedido) => {
+      pedidos.forEach((pedido) => {
         pedidosCount[pedido.consultor_id] = pedidosCount[pedido.consultor_id]
           ? pedidosCount[pedido.consultor_id] + 1
           : 1;
@@ -90,7 +90,6 @@ const listConsults = async (req, res) => {
           faturamentoPorConsultor[consultorId] = valor;
         }
       });
-      console.log({ pedidosCount });
       // Adicionamos o faturamento e calculamos a posição no ranking
       const consultoresComFaturamento = consultores.map((consultor) => ({
         ...consultor,
