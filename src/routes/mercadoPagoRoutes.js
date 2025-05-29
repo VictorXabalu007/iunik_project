@@ -94,6 +94,8 @@ async function consultarPagamento(paymentId) {
         datarealizado
       };
       await knex('movimentacoes').insert(moviment);
+      //teste
+      await knex('pedidos').where('id', pedido.id).update({ statuspag: 'realizado' })
   
       if(data.payment_method_id === 'pix' || data.payment_type_id === 'account_money') {
         await knex('pedidos').where('id', data.external_reference).update({ formapag_id: 1 })
